@@ -30,9 +30,35 @@ CREATE TABLE IF NOT EXISTS customer_sessions (
   PRIMARY KEY (session_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS accounts (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  name VARCHAR(160) NOT NULL,
+  email VARCHAR(254) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  role VARCHAR(20) NOT NULL DEFAULT 'customer',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY accounts_email_unique (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO accounts (name, email, password_hash, role)
+VALUES ('Administrator', 'admin@okruszyna.local', '$2y$10$HPAofkO1XJoHiTLhJjh5J.4f/dX3XfK1OtEKn1./EEALd1ah58XBW', 'admin');
+
+CREATE TABLE IF NOT EXISTS auth_tokens (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  account_id BIGINT UNSIGNED NOT NULL,
+  token_hash CHAR(64) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY auth_tokens_hash_unique (token_hash),
+  KEY auth_tokens_account_idx (account_id),
+  CONSTRAINT auth_tokens_account_fk FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS orders (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   order_number VARCHAR(24) NULL,
+  account_id BIGINT UNSIGNED NULL,
   session_id CHAR(36) NULL,
   customer_name VARCHAR(160) NOT NULL,
   customer_email VARCHAR(254) NOT NULL,
@@ -50,7 +76,8 @@ CREATE TABLE IF NOT EXISTS orders (
   PRIMARY KEY (id),
   UNIQUE KEY orders_order_number_unique (order_number),
   KEY orders_pickup_date_idx (pickup_date, pickup_time),
-  KEY orders_session_id_idx (session_id)
+  KEY orders_session_id_idx (session_id),
+  KEY orders_account_id_idx (account_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS order_items (

@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Konto | Okruszyna</title>
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body data-page="account">
+    <div id="app"></div>
+    <div id="toast"></div>
+    <template id="account-auth-template">
+      <div class="wrap account-auth">
+        <div class="card">
+          <div class="eb">Twoje konto</div>
+          <h1>Zaloguj się lub załóż konto</h1>
+          <p class="muted">
+            Zamówienia i ulubione wypieki będą dostępne na każdym urządzeniu.
+          </p>
+          <form id="account-form">
+            <label class="l" for="account-name">Imię i nazwisko</label
+            ><input
+              class="in w"
+              id="account-name"
+              autocomplete="name"
+              placeholder="Anna Kowalska"
+            /><label class="l" for="account-email">Adres e-mail</label
+            ><input
+              class="in w"
+              id="account-email"
+              type="email"
+              autocomplete="email"
+              required
+            /><label class="l" for="account-password">Hasło</label
+            ><input
+              class="in w"
+              id="account-password"
+              type="password"
+              minlength="8"
+              autocomplete="new-password"
+              required
+            /><small class="muted">Hasło musi mieć co najmniej 8 znaków.</small>
+            <div class="row account-actions">
+              <button class="btn" type="submit" data-mode="register">
+                Załóż konto</button
+              ><button class="btn o" type="submit" data-mode="login">
+                Zaloguj się
+              </button>
+            </div>
+            <div class="err" id="account-error"></div>
+          </form>
+        </div>
+      </div>
+    </template>
+    <template id="account-page-template">
+      <div class="wrap acc">
+        <aside class="sd">
+          <div class="av" data-account-initials></div>
+          <p>
+            <b data-account-name></b><br /><small
+              class="muted"
+              data-account-email
+            ></small>
+          </p>
+          <div class="account-menu">
+            <button class="on">▣ Moje zamówienia</button
+            ><button data-a="favs">
+              ♡ Lista życzeń · <span data-favorite-count></span></button
+            ><button data-a="out">⇥ Wyloguj się</button>
+          </div>
+        </aside>
+        <main>
+          <div class="eb">Twoje małe przyjemności</div>
+          <h1>Dzień dobry, <span data-account-first-name></span>.</h1>
+          <p class="muted">
+            Tutaj znajdziesz swoje zamówienia i smaki, do których chcesz wrócić.
+          </p>
+          <div class="card account-notice">
+            <b>Jesteśmy w kontakcie</b><br /><small class="muted"
+              >Zmiany statusu zamówień są zapisane na Twoim koncie.</small
+            >
+          </div>
+          <h2>Moje zamówienia</h2>
+          <div data-active-orders></div>
+          <div data-archived-orders></div>
+          <h2 id="zyczen">Na kolejną słodką chwilę</h2>
+          <div class="rv favorite-grid" data-favorite-products></div>
+        </main>
+      </div>
+    </template>
+    <template id="active-order-template">
+      <article class="card order-card">
+        <div class="row">
+          <div>
+            <b data-order-number></b><br /><small
+              >Złożone <span data-order-date></span
+            ></small>
+          </div>
+          <span class="pill" data-order-status></span
+          ><strong data-order-total></strong>
+        </div>
+        <div class="tl" data-order-timeline></div>
+        <div class="ord order-details">
+          <div><span data-order-items></span><span data-order-note></span></div>
+          <div>
+            <b
+              ><span data-order-pickup-date></span
+              ><span data-order-pickup-time></span></b
+            ><br /><small>ul. Słodka 12, Kraków</small>
+          </div>
+        </div>
+      </article>
+    </template>
+    <template id="archived-order-template">
+      <article class="card order-card">
+        <div class="ord">
+          <div>
+            <b data-order-number></b><br /><small data-order-date></small>
+          </div>
+          <span class="pill" data-order-status></span
+          ><span data-order-total></span
+          ><button class="u" data-order-reorder>Zamów ponownie ↗</button>
+        </div>
+        <small data-order-reason></small>
+      </article>
+    </template>
+    <template id="favorite-product-template">
+      <article class="card favorite-item">
+        <span class="favorite-image" data-product-image></span>
+        <div>
+          <h3 data-product-name></h3>
+          <div data-product-price></div>
+          <button class="u" data-a="add">Dodaj do koszyka +</button
+          ><button class="u" data-a="fav">Usuń z listy</button>
+        </div>
+      </article>
+    </template>
+    <script src="js/data.js?v=20261104"></script>
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/shop.js"></script>
+    <script src="js/account.js"></script>
+    <script src="js/admin.js?v=20261104-2"></script>
+    <script src="js/checkout.js"></script>
+    <script src="js/app.js"></script>
+  </body>
+</html>

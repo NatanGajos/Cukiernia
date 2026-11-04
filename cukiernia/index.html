@@ -1,8 +1,11 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pl">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
     <title>Okruszyna – cukiernia rzemieślnicza</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap"
@@ -13,12 +16,140 @@
   <body>
     <div id="app"></div>
     <div id="toast"></div>
-    <script src="js/data.js"></script>
+
+    <template id="home-page-template">
+      <div class="hero">
+        <div class="wrap hero-content">
+          <div>
+            <div class="eb">Z miłości do małych przyjemności</div>
+            <h1>Życie smakuje lepiej z ciastem.</h1>
+            <p>
+              Prawdziwe masło, sezonowe owoce i odrobina czułości. Wypieki na
+              Twoje wielkie chwile i całkiem zwykłe popołudnia.
+            </p>
+            <p>
+              <a class="btn" href="index.html#/#wypieki"
+                >Znajdź swoje ciasto ↗</a
+              >
+            </p>
+            <small class="muted">Na zamówienie · Odbiór już za 2 dni</small>
+          </div>
+          <div class="ph hi" style="--c1: #efe0cd; --c2: #b8895f">
+            🎂
+            <div class="cap">NASZ SŁODKI PODPIS<b>Wanilia &amp; wiśnia</b></div>
+          </div>
+        </div>
+      </div>
+      <section id="wypieki">
+        <div class="wrap">
+          <div class="row">
+            <div>
+              <div class="eb">Dobre rzeczy, proste składniki</div>
+              <h2>Na co masz ochotę?</h2>
+            </div>
+            <small class="muted"
+              ><span data-products-count></span> autorskie wypieki</small
+            >
+          </div>
+          <div class="chips" role="group" data-category-filters></div>
+          <div class="fl">
+            <input
+              class="in"
+              id="q"
+              placeholder="Szukaj po nazwie, np. sernik"
+              aria-label="Szukaj"
+            />
+            <select class="in" id="pr" aria-label="Cena">
+              <option value="">Cena: wszystkie</option>
+              <option value="low">do 130 zł</option>
+              <option value="high">od 130 zł</option>
+            </select>
+          </div>
+          <div class="grid" id="grid"></div>
+          <div class="note">
+            Każde ciasto pieczemy dla Ciebie. Dostępny termin odbioru wybierzesz
+            w kasie.
+          </div>
+        </div>
+      </section>
+      <section class="alt" id="jak">
+        <div class="wrap">
+          <h2>Od naszej pracowni do Twojego stołu.</h2>
+          <div class="steps">
+            <div>
+              <i>01</i><b>Wybierz coś pysznego</b>
+              <p>
+                Znajdź swój smak. Do tortu dodaj osobisty napis od nas, bez
+                dopłaty.
+              </p>
+            </div>
+            <div>
+              <i>02</i><b>Zarezerwuj odbiór</b>
+              <p>
+                Wybierz wolny dzień i godzinę, minimum 2 dni wcześniej. Zapłać
+                wygodnie online.
+              </p>
+            </div>
+            <div>
+              <i>03</i><b>Wpadnij do Okruszyny</b>
+              <p>
+                Odbierz świeży wypiek przy ul. Słodkiej 12 w Krakowie. O
+                statusie damy znać e-mailem.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section id="historia">
+        <div class="wrap story">
+          <div class="ph" style="--c1: #d9b48a; --c2: #7b5436">👩‍🍳</div>
+          <div>
+            <div class="eb">Ręce, serce i prawdziwe masło</div>
+            <h2>Nie idziemy na skróty. Wolimy piec.</h2>
+            <p>
+              W Okruszynie liczy się to, co w środku. Wanilia, którą naprawdę
+              czuć. Twaróg, który nie potrzebuje udawać. Owoce, które smakują
+              swoim sezonem. Każdy wypiek powstaje w małych partiach i
+              przechodzi przez nasze ręce.
+            </p>
+            <a class="btn o" href="panel.html">Poznaj naszą pracownię ↗</a>
+          </div>
+        </div>
+      </section>
+      <section class="reviews-section">
+        <div class="wrap">
+          <h2>Najlepiej smakuje razem.</h2>
+          <small class="muted"
+            >Przykładowe opinie i oceny — treści demonstracyjne projektu.</small
+          >
+          <div class="rv" data-review-list></div>
+        </div>
+      </section>
+    </template>
+    <template id="product-card-template">
+      <article class="pc">
+        <div class="product-image-wrap">
+          <button class="hrt" data-a="fav" aria-label="Ulubione">♡</button
+          ><a data-product-link><span data-product-image></span></a>
+        </div>
+        <div class="tg" data-product-tag></div>
+        <a data-product-link><h3 data-product-name></h3></a
+        ><small data-product-size></small>
+        <div class="pr">
+          <span data-product-price></span
+          ><button class="pl" data-a="add" aria-label="Dodaj do koszyka">
+            +
+          </button>
+        </div>
+      </article>
+    </template>
+
+    <script src="js/data.js?v=20261104"></script>
     <script src="js/api.js"></script>
     <script src="js/layout.js"></script>
     <script src="js/shop.js"></script>
     <script src="js/account.js"></script>
-    <script src="js/admin.js"></script>
+    <script src="js/admin.js?v=20261104-2"></script>
     <script src="js/checkout.js"></script>
     <script src="js/app.js"></script>
   </body>

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pl">
+  <body>
+    <template id="site-header-template">
+      <div class="top">PIECZEMY NA ZAMÓWIENIE · ODBIÓR W KRAKOWIE</div>
+      <header>
+        <div class="wrap hd">
+          <a class="logo" href="index.html"
+            >okruszyna<small>CUKIERNIA RZEMIEŚLNICZA</small></a
+          >
+          <span class="secure-checkout" data-header-secure
+            >Bezpieczne zamówienie · SSL</span
+          >
+          <nav data-header-navigation>
+            <a href="index.html#/#wypieki">Nasze wypieki</a>
+            <a href="index.html#/#historia">Nasza historia</a>
+            <a href="index.html#/#jak">Jak zamawiać</a>
+          </nav>
+          <div class="ic" data-header-actions>
+            <button class="ib" data-a="search" aria-label="Szukaj">⌕</button>
+            <button class="ib" data-a="favs" aria-label="Lista życzeń">
+              ♡
+            </button>
+            <a class="ib" href="konto.html" aria-label="Konto">☺</a>
+            <a class="ib cnt" href="koszyk.html" aria-label="Koszyk"
+              >🛍 <span data-cart-count>0</span></a
+            >
+            <button class="ib" id="burger" data-a="menu" aria-label="Menu">
+              ☰
+            </button>
+          </div>
+        </div>
+      </header>
+    </template>
+    <template id="site-footer-template">
+      <footer>
+        <div class="wrap">
+          <div>
+            © 2026 Okruszyna · Projekt fikcyjnej cukierni
+            <a href="index.html">Regulamin</a><a href="index.html">Prywatność</a
+            ><a href="index.html">Ustawienia cookies</a>
+          </div>
+        </div>
+      </footer>
+    </template>
+    <template id="order-summary-template">
+      <aside>
+        <div class="card sm">
+          <h2>Twoje zamówienie</h2>
+          <div data-summary-items></div>
+          <div>
+            <span>Wartość produktów</span><span data-summary-subtotal></span>
+          </div>
+          <div data-summary-discount></div>
+          <div><span>Odbiór w pracowni</span><span>0,00 zł</span></div>
+          <div class="tot">
+            <span>Do zapłaty</span
+            ><span class="serif" data-summary-total></span>
+          </div>
+          <div data-summary-action></div>
+          <small class="summary-note">BLIK · Karta · Szybki przelew</small>
+        </div>
+      </aside>
+    </template>
+  </body>
+</html>

@@ -43,7 +43,74 @@ function database(): PDO
         ]
     );
 
+    $connection->exec(
+        'CREATE TABLE IF NOT EXISTS accounts (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            name VARCHAR(160) NOT NULL,
+            email VARCHAR(254) NOT NULL,
+            password_hash VARCHAR(255) NOT NULL,
+            role VARCHAR(20) NOT NULL DEFAULT \'customer\',
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY accounts_email_unique (email)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    );
+    $connection->exec(
+        'CREATE TABLE IF NOT EXISTS auth_tokens (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            account_id BIGINT UNSIGNED NOT NULL,
+            token_hash CHAR(64) NOT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY auth_tokens_hash_unique (token_hash),
+            KEY auth_tokens_account_idx (account_id),
+            CONSTRAINT auth_tokens_account_fk FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    );
+    $connection->exec('ALTER TABLE accounts ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT \'customer\'');
+    $connection->exec('ALTER TABLE orders ADD COLUMN IF NOT EXISTS account_id BIGINT UNSIGNED NULL');
+    $connection->exec('ALTER TABLE orders ADD INDEX IF NOT EXISTS orders_account_id_idx (account_id)');
+
     return $connection;
+}
+
+function accountFromToken(PDO $db, string $token): ?array
+{
+    if (!preg_match('/^[A-Za-z0-9_-]{32,128}$/', $token)) {
+        return null;
+    }
+
+    $query = $db->prepare(
+        'SELECT accounts.id, accounts.name, accounts.email, accounts.role
+         FROM auth_tokens
+         JOIN accounts ON accounts.id = auth_tokens.account_id
+         WHERE auth_tokens.token_hash = ?'
+    );
+    $query->execute([hash('sha256', $token)]);
+    $account = $query->fetch();
+
+    return $account ?: null;
+}
+
+function accountResponse(array $account): array
+{
+    return [
+        'id' => (int) $account['id'],
+        'name' => $account['name'],
+        'email' => $account['email'],
+        'role' => $account['role'] ?? 'customer',
+    ];
+}
+
+function createAuthToken(PDO $db, int $accountId): string
+{
+    $token = bin2hex(random_bytes(32));
+    $statement = $db->prepare(
+        'INSERT INTO auth_tokens (account_id, token_hash) VALUES (?, ?)'
+    );
+    $statement->execute([$accountId, hash('sha256', $token)]);
+
+    return $token;
 }
 
 function requestBody(): array
@@ -103,7 +170,7 @@ function readProducts(PDO $db): array
     );
 }
 
-function readOrder(PDO $db, string $number, string $session): ?array
+function readOrder(PDO $db, string $number, string $session, ?int $accountId = null): ?array
 {
     $statement = $db->prepare('SELECT * FROM orders WHERE order_number = ?');
     $statement->execute([$number]);
@@ -126,7 +193,7 @@ function readOrder(PDO $db, string $number, string $session): ?array
         'st' => $row['status'],
         'pickupDate' => $row['pickup_date'],
         't' => substr((string) $row['pickup_time'], 0, 5),
-        'mine' => $row['session_id'] === $session || $row['customer_email'] === 'anna@example.com',
+        'mine' => $row['session_id'] === $session || ($accountId !== null && (int) $row['account_id'] === $accountId),
         'note' => $row['note'],
         'why' => $row['cancellation_reason'],
         'items' => array_map(
@@ -136,18 +203,22 @@ function readOrder(PDO $db, string $number, string $session): ?array
     ];
 }
 
-function readOrders(PDO $db, string $session): array
+function readOrders(PDO $db, string $session, ?int $accountId = null, string $accountRole = 'customer'): array
 {
     $numbers = $db->query(
         'SELECT order_number FROM orders ORDER BY pickup_date, pickup_time, id'
     )->fetchAll(PDO::FETCH_COLUMN);
 
-    return array_values(array_filter(
+    $orders = array_values(array_filter(
         array_map(
-            static fn (string $number): ?array => readOrder($db, $number, $session),
+            static fn (string $number): ?array => readOrder($db, $number, $session, $accountId),
             $numbers
         )
     ));
+
+    return $accountRole === 'admin'
+        ? $orders
+        : array_values(array_filter($orders, static fn (array $order): bool => $order['mine']));
 }
 
 function validateProduct(array $data): array

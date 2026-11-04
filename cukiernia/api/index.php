@@ -9,14 +9,89 @@ if (!in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1'], true)) {
 }
 
 $session = sessionId();
+$authToken = (string) ($_SERVER['HTTP_X_AUTH_TOKEN'] ?? '');
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $requestPath = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?: '';
 $apiPosition = strpos($requestPath, '/api/');
 $path = $apiPosition === false ? '' : substr($requestPath, $apiPosition + 5);
 $path = preg_replace('#^index\.php/?#', '', $path);
 
+function requireAdministrator(?array $account): void
+{
+    if (!$account || ($account['role'] ?? 'customer') !== 'admin') {
+        respond(['error' => 'Ta funkcja jest dostępna tylko dla administratora.'], 403);
+    }
+}
+
 try {
     $db = database();
+
+    if ($method === 'POST' && $path === 'auth/register') {
+        $data = requestBody();
+        $name = trim((string) ($data['name'] ?? ''));
+        $email = strtolower(trim((string) ($data['email'] ?? '')));
+        $password = (string) ($data['password'] ?? '');
+
+        if (
+            $name === '' || mb_strlen($name) > 160
+            || !filter_var($email, FILTER_VALIDATE_EMAIL) || mb_strlen($email) > 254
+            || strlen($password) < 8 || strlen($password) > 255
+        ) {
+            respond(['error' => 'Podaj imię, poprawny e-mail i hasło o długości co najmniej 8 znaków.'], 422);
+        }
+
+        $accountQuery = $db->prepare('SELECT id FROM accounts WHERE email = ?');
+        $accountQuery->execute([$email]);
+
+        if ($accountQuery->fetch()) {
+            respond(['error' => 'Konto z tym adresem e-mail już istnieje.'], 409);
+        }
+
+        $createAccount = $db->prepare(
+            'INSERT INTO accounts (name, email, password_hash, role) VALUES (?, ?, ?, ?)'
+        );
+        $createAccount->execute([$name, $email, password_hash($password, PASSWORD_DEFAULT), 'customer']);
+        $accountId = (int) $db->lastInsertId();
+
+        $account = ['id' => $accountId, 'name' => $name, 'email' => $email, 'role' => 'customer'];
+        $token = createAuthToken($db, $accountId);
+        respond(['account' => accountResponse($account), 'token' => $token], 201);
+    }
+
+    if ($method === 'POST' && $path === 'auth/login') {
+        $data = requestBody();
+        $email = strtolower(trim((string) ($data['email'] ?? '')));
+        $password = (string) ($data['password'] ?? '');
+        $accountQuery = $db->prepare('SELECT id, name, email, role, password_hash FROM accounts WHERE email = ?');
+        $accountQuery->execute([$email]);
+        $account = $accountQuery->fetch();
+
+        if (!$account || !password_verify($password, $account['password_hash'])) {
+            respond(['error' => 'Nieprawidłowy e-mail lub hasło.'], 401);
+        }
+
+        respond([
+            'account' => accountResponse($account),
+            'token' => createAuthToken($db, (int) $account['id']),
+        ]);
+    }
+
+    if ($method === 'POST' && $path === 'auth/logout') {
+        if ($authToken !== '') {
+            $deleteToken = $db->prepare('DELETE FROM auth_tokens WHERE token_hash = ?');
+            $deleteToken->execute([hash('sha256', $authToken)]);
+        }
+
+        respond(['loggedOut' => true]);
+    }
+
+    if ($method === 'GET' && $path === 'auth/me') {
+        $account = accountFromToken($db, $authToken);
+        respond(['account' => $account ? accountResponse($account) : null]);
+    }
+
+    $account = accountFromToken($db, $authToken);
+    $accountId = $account ? (int) $account['id'] : null;
 
     if ($method === 'GET' && $path === 'bootstrap') {
         $savedQuery = $db->prepare(
@@ -27,7 +102,8 @@ try {
 
         respond([
             'products' => readProducts($db),
-            'orders' => readOrders($db, $session),
+            'orders' => readOrders($db, $session, $accountId, $account['role'] ?? 'customer'),
+            'account' => $account ? accountResponse($account) : null,
             'saved' => $saved
                 ? [
                     'cart' => json_decode($saved['cart'], true, 512, JSON_THROW_ON_ERROR),
@@ -119,8 +195,8 @@ try {
         $insertOrder = $db->prepare(
             'INSERT INTO orders
               (order_number, session_id, customer_name, customer_email, customer_phone,
-               pickup_date, pickup_time, receipt_method, payment_method, status, total, note, consent_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())'
+                             pickup_date, pickup_time, receipt_method, payment_method, status, total, note, consent_at, account_id)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)'
         );
         $insertOrder->execute([
             $temporaryNumber,
@@ -135,6 +211,7 @@ try {
             'Opłacone',
             $total,
             $note,
+            $accountId,
         ]);
 
         $orderId = (int) $db->lastInsertId();
@@ -162,11 +239,12 @@ try {
         $clearCart->execute(['[]', $session]);
         $db->commit();
 
-        $order = readOrder($db, $orderNumber, $session);
+        $order = readOrder($db, $orderNumber, $session, $accountId);
         respond(['order' => $order], 201);
     }
 
     if ($method === 'POST' && $path === 'products') {
+        requireAdministrator($account);
         $product = validateProduct(requestBody());
         $statement = $db->prepare(
             'INSERT INTO products
@@ -181,6 +259,7 @@ try {
     }
 
     if ($method === 'PUT' && preg_match('#^products/(\d+)$#', $path, $matches)) {
+        requireAdministrator($account);
         $productId = productIdFromData($db, $matches[1]);
         $product = validateProduct(requestBody());
         $product['id'] = $productId;
@@ -200,6 +279,7 @@ try {
     }
 
     if ($method === 'PUT' && preg_match('#^orders/([^/]+)/status$#', $path, $matches)) {
+        requireAdministrator($account);
         $data = requestBody();
         $status = (string) ($data['status'] ?? '');
 
@@ -209,7 +289,7 @@ try {
 
         $statement = $db->prepare('UPDATE orders SET status = ? WHERE order_number = ?');
         $statement->execute([$status, $matches[1]]);
-        $order = readOrder($db, $matches[1], $session);
+        $order = readOrder($db, $matches[1], $session, $accountId);
 
         if (!$order) {
             respond(['error' => 'Nie znaleziono zamówienia.'], 404);
@@ -219,6 +299,7 @@ try {
     }
 
     if ($method === 'POST' && preg_match('#^orders/([^/]+)/cancel$#', $path, $matches)) {
+        requireAdministrator($account);
         $reason = trim((string) (requestBody()['reason'] ?? ''));
 
         if (mb_strlen($reason) < 5 || mb_strlen($reason) > 500) {
@@ -229,7 +310,7 @@ try {
             "UPDATE orders SET status = 'Anulowane', cancellation_reason = ? WHERE order_number = ?"
         );
         $statement->execute([$reason, $matches[1]]);
-        $order = readOrder($db, $matches[1], $session);
+        $order = readOrder($db, $matches[1], $session, $accountId);
 
         if (!$order) {
             respond(['error' => 'Nie znaleziono zamówienia.'], 404);

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kasa | Okruszyna</title>
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body data-page="checkout">
+    <div id="app"></div>
+    <div id="toast"></div>
+    <template id="checkout-page-template">
+      <div class="wrap checkout-page">
+        <div class="row checkout-heading">
+          <h1>Ostatni krok do przyjemności.</h1>
+          <small class="muted">✓ Koszyk — 02 Dane i odbiór — 03 Płatność</small>
+        </div>
+        <div class="two">
+          <div class="checkout-fields">
+            <div class="card row checkout-account-note">
+              <div>
+                <b>Kupujesz bez zakładania konta</b><br /><small class="muted"
+                  >Potwierdzenie i statusy wyślemy na Twój e-mail.</small
+                >
+              </div>
+              <a href="konto.html">Masz konto? Zaloguj się</a>
+            </div>
+            <div class="card">
+              <h2>01 &nbsp;Jak się z Tobą skontaktować?</h2>
+              <div class="f2" data-contact-fields></div>
+            </div>
+            <div class="card">
+              <h2>02 &nbsp;Kiedy się widzimy?</h2>
+              <small class="muted"
+                >Okruszyna · ul. Słodka 12, Kraków · odbiór gratis</small
+              >
+              <p><b>Listopad 2026</b></p>
+              <div class="days" data-pickup-days></div>
+              <small class="muted"
+                >Wyszarzone daty: pracownia nieczynna. Zamawiamy z min.
+                2-dniowym wyprzedzeniem.</small
+              >
+              <div class="sl" data-pickup-times></div>
+              <div data-pickup-summary></div>
+            </div>
+            <div class="card">
+              <h2>03 &nbsp;Dokument sprzedaży</h2>
+              <div class="rg" data-receipt-options></div>
+              <div data-invoice-fields></div>
+            </div>
+            <div class="card">
+              <h2>04 &nbsp;Jak chcesz zapłacić?</h2>
+              <div class="rg" data-payment-options></div>
+            </div>
+          </div>
+          <div>
+            <div data-order-summary></div>
+            <div data-pickup-plan></div>
+            <label class="terms-label"
+              ><input type="checkbox" id="terms" /> Akceptuję regulamin sklepu i
+              zapoznałam się z polityką prywatności. *</label
+            >
+            <div class="err" id="error-terms"></div>
+          </div>
+        </div>
+      </div>
+    </template>
+    <script src="js/data.js?v=20261104"></script>
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/shop.js"></script>
+    <script src="js/account.js"></script>
+    <script src="js/admin.js?v=20261104-2"></script>
+    <script src="js/checkout.js"></script>
+    <script src="js/app.js"></script>
+  </body>
+</html>

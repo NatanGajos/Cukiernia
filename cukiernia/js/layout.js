@@ -1,4 +1,51 @@
-const head = (min) =>
-  `<div class="top">PIECZEMY NA ZAMÓWIENIE · ODBIÓR W KRAKOWIE</div><header><div class="wrap hd"><a class="logo" href="#/">okruszyna<small>CUKIERNIA RZEMIEŚLNICZA</small></a>${min ? '<span style="font-size:12px;color:var(--mut)">Bezpieczne zamówienie · SSL</span>' : `<nav class="${S.menu ? 'open' : ''}"><a href="#/#wypieki">Nasze wypieki</a><a href="#/#historia">Nasza historia</a><a href="#/#jak">Jak zamawiać</a></nav><div class="ic"><button class="ib" data-a="search" aria-label="Szukaj">⌕</button><button class="ib" data-a="favs" aria-label="Lista życzeń">♡</button><a class="ib" href="#/konto" aria-label="Konto" style="text-decoration:none">☺</a><a class="ib cnt" href="#/koszyk" aria-label="Koszyk" style="text-decoration:none">🛍 ${count()}</a><button class="ib" id="burger" data-a="menu" aria-label="Menu">☰</button></div>`}</div></header>`;
-const foot = () =>
-  `<footer><div class="wrap"><div>© 2026 Okruszyna · Projekt fikcyjnej cukierni <a href="#/">Regulamin</a><a href="#/">Prywatność</a><a href="#/">Ustawienia cookies</a></div></div></footer>`;
+let sharedTemplatesDocument = null;
+
+async function loadSharedTemplates() {
+  if (sharedTemplatesDocument) return;
+
+  const response = await fetch("templates.html");
+  const templatesMarkup = await response.text();
+  sharedTemplatesDocument = new DOMParser().parseFromString(
+    templatesMarkup,
+    "text/html",
+  );
+}
+
+function getTemplateMarkup(templateId) {
+  const template =
+    document.getElementById(templateId) ||
+    sharedTemplatesDocument?.getElementById(templateId);
+
+  if (!template) {
+    throw new Error(`Brak szablonu HTML: ${templateId}`);
+  }
+
+  return template.innerHTML;
+}
+
+function createTemplateRoot(templateId) {
+  const templateRoot = document.createElement("div");
+  templateRoot.innerHTML = getTemplateMarkup(templateId);
+  return templateRoot;
+}
+
+function renderHeader(isCheckoutPage = false) {
+  const headerWrapper = document.createElement("div");
+  headerWrapper.innerHTML = getTemplateMarkup("site-header-template");
+
+  headerWrapper.querySelector("[data-header-secure]").style.display =
+    isCheckoutPage ? "inline" : "none";
+  headerWrapper.querySelector("[data-header-navigation]").style.display =
+    isCheckoutPage ? "none" : "";
+  headerWrapper.querySelector("[data-header-actions]").style.display =
+    isCheckoutPage ? "none" : "";
+  headerWrapper.querySelector("[data-cart-count]").textContent =
+    getCartItemCount();
+  headerWrapper.querySelector("nav").classList.toggle("open", appState.menu);
+
+  return headerWrapper.innerHTML;
+}
+
+function renderFooter() {
+  return getTemplateMarkup("site-footer-template");
+}

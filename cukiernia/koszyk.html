@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Koszyk | Okruszyna</title>
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body data-page="cart">
+    <div id="app"></div>
+    <div id="toast"></div>
+    <template id="cart-page-template">
+      <div class="wrap cart-page">
+        <div class="row cart-heading">
+          <div>
+            <div class="eb">Jeszcze chwila do czegoś pysznego</div>
+            <h1>Twój koszyk</h1>
+          </div>
+          <small><b>01 Koszyk</b> &nbsp; 02 Dane i odbiór — 03 Płatność</small>
+        </div>
+        <div class="two cart-layout">
+          <div>
+            <div class="row cart-summary-line">
+              <span data-cart-count-text></span><span>Wartość</span>
+            </div>
+            <div data-cart-items></div>
+            <div class="card coupon-box">
+              <b>Masz coś słodkiego w zanadrzu?</b>
+              <div class="coupon-controls">
+                <input class="in w" id="cp" placeholder="Kod rabatowy" /><button
+                  class="btn o"
+                  data-a="cpn"
+                >
+                  Zastosuj
+                </button>
+              </div>
+              <div data-coupon-status></div>
+            </div>
+            <p>
+              <a href="index.html" class="muted"
+                >← Wróć po jeszcze jeden okruszek</a
+              >
+            </p>
+          </div>
+          <div data-order-summary></div>
+        </div>
+      </div>
+    </template>
+    <template id="cart-item-template">
+      <article class="ci">
+        <a data-product-link><span data-product-image></span></a>
+        <div>
+          <h3 data-product-name></h3>
+          <small data-product-details></small>
+          <div data-cart-message></div>
+          <div class="cart-item-actions">
+            <span class="qty"
+              ><button data-a="cq" data-d="-1" aria-label="Mniej">−</button
+              ><span data-cart-quantity></span
+              ><button data-a="cq" data-d="1" aria-label="Więcej">
+                +
+              </button></span
+            ><button class="u" data-a="rm">Usuń</button>
+          </div>
+        </div>
+        <b data-cart-total></b>
+      </article>
+    </template>
+    <template id="empty-cart-template">
+      <div class="wrap empty-cart">
+        <div class="card">
+          <p>Koszyk jest pusty. Wybierz coś pysznego.</p>
+          <a class="btn" href="index.html">Zobacz wypieki</a>
+        </div>
+      </div>
+    </template>
+    <script src="js/data.js?v=20261104"></script>
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/shop.js"></script>
+    <script src="js/account.js"></script>
+    <script src="js/admin.js?v=20261104-2"></script>
+    <script src="js/checkout.js"></script>
+    <script src="js/app.js"></script>
+  </body>
+</html>

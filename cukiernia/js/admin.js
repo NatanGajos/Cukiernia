@@ -1,27 +1,187 @@
-function adm(tab) {
-  const sel = S.orders.find((o) => o.id == S.sel),
-    act = S.orders.filter((o) => !['Odebrane', 'Anulowane'].includes(o.st));
-  const side = `<aside><a class="logo" href="#/">okruszyna<small>PANEL PRACOWNI</small></a><button class="${tab == 'o' ? 'on' : ''}" data-a="go" data-v="#/panel">Zamówienia</button><button class="${tab == 'a' ? 'on' : ''}" data-a="go" data-v="#/panel/asortyment">Asortyment</button><button data-a="cal">Kalendarz odbiorów</button><button data-a="cal">Ustawienia</button><p style="font-size:12px;margin:30px 8px"><b>Marta Nowak</b><br>Manager cukierni<br><a href="#/">↗ Zobacz sklep</a></p></aside>`;
-  if (tab == 'a') {
-    const p = pid(S.edit);
-    return `<div class="adm">${side}<main><div class="row" style="align-items:center"><div><div class="eb">Pracownia / Asortyment</div><h1 style="font-size:clamp(30px,4vw,42px);margin-top:8px">Twoja słodka kolekcja.</h1></div><button class="btn" data-a="newp">+ Dodaj nowy produkt</button></div><div class="kp"><div class="card"><b>${P.length}</b>Produkty w sklepie</div><div class="card"><b>${P.length}</b>Dostępne na zamówienie</div><div class="card"><b>0</b>Wersje robocze</div></div><div class="two" style="grid-template-columns:1fr 1fr;gap:24px"><div class="tbl">${P.map((x) => `<button class="tr ${x.id == S.edit ? 'on' : ''}" style="grid-template-columns:70px 1fr 90px" data-a="edit" data-id="${x.id}">${img(x)}<span><b>${escapeHtml(x.name)}</b><small>${escapeHtml(x.size)}</small><small style="color:var(--ac)">● Na zamówienie</small></span><b>${zl(x.price)}</b></button>`).join('')}</div>
-<form class="card" id="pf"><div class="row"><h2 style="font-size:28px">Edytuj produkt</h2><span class="pill" style="background:var(--ok)">Opublikowany</span></div><label class="l">Nazwa produktu *</label><input class="in w" name="name" required value="${escapeHtml(p.name)}"><div class="f2"><div><label class="l">Kategoria *</label><select class="in w" name="cat">${['Torty', 'Serniki', 'Tarty'].map((c) => `<option ${p.cat == c ? 'selected' : ''}>${c}</option>`).join('')}</select></div><div><label class="l">Cena brutto (zł) *</label><input class="in w" name="price" type="number" min="1" step="0.01" required value="${p.price}"></div></div><div class="f2"><div><label class="l">Rozmiar i porcje</label><input class="in w" name="size" value="${escapeHtml(p.size)}"></div><div><label class="l">Kolor dekoracji</label><input class="in w" name="col" value="${escapeHtml(p.col)}"></div></div><label class="l">Opis produktu</label><textarea class="in w" name="desc" rows="3">${escapeHtml(p.desc)}</textarea><label class="l">Skład *</label><textarea class="in w" name="ing" rows="3" required>${escapeHtml(p.ing)}</textarea><label class="l">Alergeny *</label><input class="in w" name="al" value="${escapeHtml(p.al.join(', '))}"><div style="display:flex;gap:10px;margin-top:20px"><button class="btn" style="flex:1">Zapisz zmiany</button><button type="button" class="btn o" data-a="cancel">Anuluj</button></div></form></div></main></div>`;
-  }
-  return `<div class="adm">${side}<main><div class="row"><div><div class="eb">Pracownia / Zamówienia</div><h1 style="font-size:clamp(30px,4vw,42px);margin-top:8px">Dobry plan. Pyszny dzień.</h1></div><small>Wtorek, 3 listopada 2026</small></div><div class="kp"><div class="card"><b>${act.length}</b>Najbliższe zamówienia</div><div class="card"><b>${act.filter((o) => o.st == 'W przygotowaniu').length}</b>W przygotowaniu</div><div class="card"><b>${act.filter((o) => o.st == 'Opłacone').length}</b>Czekają na przygotowanie</div></div>
-<div class="two" style="grid-template-columns:1fr 1fr;gap:24px"><div><input class="in w" id="oq" placeholder="Numer zamówienia lub nazwisko" aria-label="Szukaj zamówienia"><div class="tbl" id="ol">${olist(act, '')}</div></div>
-<div class="card" id="od">${sel ? `<h2 style="font-size:30px">#${escapeHtml(sel.id)}</h2><small style="color:var(--mut)">${escapeHtml(sel.name)}</small><p><b>Odbiór: ${escapeHtml(sel.d)} 2026 ${escapeHtml(sel.t)}</b></p><p style="font-size:13px">${sel.items.map((i) => `${i[1]} × ${escapeHtml(pid(i[0]).name)} · ${zl(pid(i[0]).price * i[1])}`).join('<br>')}</p><p><b>${zl(sel.total)}</b> <span class="pill">${escapeHtml(sel.st)}</span></p><label class="l">Status realizacji</label><div style="display:flex;gap:10px"><select class="in w" id="ss">${stat.map((s) => `<option ${s == sel.st ? 'selected' : ''}>${s}</option>`).join('')}</select><button class="btn" data-a="ssv" style="white-space:nowrap">Zapisz status</button></div><small style="color:var(--mut)">Każda zmiana wysyła klientce nową wiadomość e-mail.</small><div class="card" style="margin-top:18px;padding:16px"><b style="font-size:13px">Anuluj zamówienie · tylko manager</b><label class="l">Powód anulowania *</label><textarea class="in w" id="why" rows="2"></textarea><div class="err" id="e_why"></div><button class="btn o w" data-a="cx" style="margin-top:10px">Potwierdź anulowanie i powiadom</button></div>` : '<p>Wybierz zamówienie z listy.</p>'}</div></div></main></div>`;
+const ADMIN_PRODUCT_CATEGORIES = ["Torty", "Serniki", "Tarty"];
+
+function renderAdminSidebar(activeTab) {
+  const sidebarRoot = createTemplateRoot("admin-page-template");
+  const ordersButton = sidebarRoot.querySelector("[data-admin-orders]");
+  const productsButton = sidebarRoot.querySelector("[data-admin-products]");
+
+  ordersButton.className = activeTab === "orders" ? "on" : "";
+  productsButton.className = activeTab === "products" ? "on" : "";
+  ordersButton.dataset.a = "go";
+  ordersButton.dataset.v = "panel.html";
+  productsButton.dataset.a = "go";
+  productsButton.dataset.v = "panel.html#asortyment";
+
+  return sidebarRoot.querySelector("aside").outerHTML;
 }
-function olist(a, q) {
-  q = q.toLowerCase();
-  const r = a
-    .filter((o) => (o.id + o.name).toLowerCase().includes(q))
-    .sort((x, y) => (x.d + x.t > y.d + y.t ? 1 : -1));
-  return r.length
-    ? r
-        .map(
-          (o) =>
-            `<button class="tr ${o.id == S.sel ? 'on' : ''}" data-a="sel" data-id="${escapeHtml(o.id)}"><span style="color:var(--ac)"><b>${escapeHtml(o.d)} · ${escapeHtml(o.t)}</b></span><span><b>#${escapeHtml(o.id)}</b><small>${escapeHtml(o.name)}</small></span><span><span class="pill">${escapeHtml(o.st)}</span><br>${zl(o.total)}</span></button>`
-        )
-        .join('')
-    : '<p style="padding:14px">Brak zamówień pasujących do wyszukiwania.</p>';
+
+function renderAdminProductList(selectedProductId) {
+  return products
+    .map((product) => {
+      const itemRoot = createTemplateRoot("admin-product-list-item-template");
+      const productLink = itemRoot.querySelector('[data-a="edit"]');
+
+      productLink.classList.toggle("on", product.id === selectedProductId);
+      productLink.dataset.id = product.id;
+      itemRoot.querySelector("[data-product-image]").outerHTML =
+        renderProductImage(product);
+      itemRoot.querySelector("[data-product-name]").textContent = product.name;
+      itemRoot.querySelector("[data-product-size]").textContent = product.size;
+      itemRoot.querySelector("[data-product-price]").textContent = formatPrice(
+        product.price,
+      );
+
+      return itemRoot.innerHTML;
+    })
+    .join("");
+}
+
+function renderAdminProductEditor(product) {
+  const editorRoot = createTemplateRoot("admin-product-editor-template");
+  const categorySelect = editorRoot.querySelector('[name="category"]');
+
+  categorySelect.innerHTML = ADMIN_PRODUCT_CATEGORIES.map(
+    (category) =>
+      `<option ${product.cat === category ? "selected" : ""}>${category}</option>`,
+  ).join("");
+  editorRoot.querySelector('[name="name"]').setAttribute("value", product.name);
+  editorRoot
+    .querySelector('[name="price"]')
+    .setAttribute("value", product.price);
+  editorRoot.querySelector('[name="size"]').setAttribute("value", product.size);
+  editorRoot
+    .querySelector('[name="decorationColor"]')
+    .setAttribute("value", product.col);
+  editorRoot.querySelector('[name="description"]').textContent = product.desc;
+  editorRoot.querySelector('[name="ingredients"]').textContent = product.ing;
+  editorRoot
+    .querySelector('[name="allergens"]')
+    .setAttribute("value", product.al.join(", "));
+
+  return editorRoot.innerHTML;
+}
+
+function renderProductAdminPage() {
+  const selectedProduct = findProductById(appState.edit);
+  const pageRoot = createTemplateRoot("admin-products-page-template");
+
+  pageRoot.querySelectorAll("[data-product-count]").forEach((counter) => {
+    counter.textContent = products.length;
+  });
+  pageRoot.querySelector("[data-product-list]").innerHTML =
+    renderAdminProductList(selectedProduct.id);
+  pageRoot.querySelector("[data-product-editor]").innerHTML =
+    renderAdminProductEditor(selectedProduct);
+
+  return pageRoot.innerHTML;
+}
+
+function getActiveOrders() {
+  return appState.orders.filter(
+    (order) => !["Odebrane", "Anulowane"].includes(order.st),
+  );
+}
+
+function renderAdminOrderList(orderList, searchPhrase) {
+  const normalizedSearch = searchPhrase.toLowerCase();
+  const matchingOrders = orderList
+    .filter((order) =>
+      `${order.id}${order.name}`.toLowerCase().includes(normalizedSearch),
+    )
+    .sort((firstOrder, secondOrder) =>
+      `${firstOrder.d}${firstOrder.t}`.localeCompare(
+        `${secondOrder.d}${secondOrder.t}`,
+      ),
+    );
+
+  if (!matchingOrders.length)
+    return '<p class="order-list-empty">Brak zamówień pasujących do wyszukiwania.</p>';
+
+  return matchingOrders
+    .map((order) => {
+      const itemRoot = createTemplateRoot("admin-order-list-item-template");
+      const orderButton = itemRoot.querySelector('[data-a="sel"]');
+
+      orderButton.classList.toggle("on", order.id === appState.sel);
+      orderButton.dataset.id = order.id;
+      itemRoot.querySelector("[data-order-pickup]").textContent =
+        `${order.d} · ${order.t}`;
+      itemRoot.querySelector("[data-order-number]").textContent =
+        `#${order.id}`;
+      itemRoot.querySelector("[data-order-name]").textContent = order.name;
+      itemRoot.querySelector("[data-order-status]").textContent = order.st;
+      itemRoot.querySelector("[data-order-total]").textContent = formatPrice(
+        order.total,
+      );
+
+      return itemRoot.innerHTML;
+    })
+    .join("");
+}
+
+function renderSelectedOrder(order) {
+  if (!order) return "<p>Wybierz zamówienie z listy.</p>";
+
+  const orderRoot = createTemplateRoot("admin-selected-order-template");
+  const orderItems = order.items
+    .map(([productId, quantity]) => {
+      const product = findProductById(productId);
+      return `${quantity} × ${escapeHtml(product.name)} · ${formatPrice(product.price * quantity)}`;
+    })
+    .join("<br>");
+  const statusSelect = orderRoot.querySelector("#order-status");
+
+  statusSelect.innerHTML = ORDER_STATUSES.map(
+    (status) =>
+      `<option ${status === order.st ? "selected" : ""}>${status}</option>`,
+  ).join("");
+  orderRoot.querySelector("[data-order-number]").textContent = `#${order.id}`;
+  orderRoot.querySelector("[data-order-name]").textContent = order.name;
+  orderRoot.querySelector("[data-order-pickup]").textContent =
+    `${order.d} 2026 ${order.t}`;
+  orderRoot.querySelector("[data-order-items]").innerHTML = orderItems;
+  orderRoot.querySelector("[data-order-total]").textContent = formatPrice(
+    order.total,
+  );
+  orderRoot.querySelector("[data-order-status]").textContent = order.st;
+
+  return orderRoot.innerHTML;
+}
+
+function renderOrderAdminPage() {
+  const activeOrders = getActiveOrders();
+  const selectedOrder =
+    activeOrders.find((order) => order.id === appState.sel) || activeOrders[0];
+  const pageRoot = createTemplateRoot("admin-orders-page-template");
+
+  appState.sel = selectedOrder?.id ?? null;
+
+  pageRoot.querySelector("[data-order-count]").textContent =
+    activeOrders.length;
+  pageRoot.querySelector("[data-preparing-count]").textContent =
+    activeOrders.filter((order) => order.st === "W przygotowaniu").length;
+  pageRoot.querySelector("[data-paid-count]").textContent = activeOrders.filter(
+    (order) => order.st === "Opłacone",
+  ).length;
+  pageRoot.querySelector("#order-list").innerHTML = renderAdminOrderList(
+    activeOrders,
+    "",
+  );
+  pageRoot.querySelector("#order-details").innerHTML =
+    renderSelectedOrder(selectedOrder);
+
+  return pageRoot.innerHTML;
+}
+
+function renderAdminPage(activeTab) {
+  const shellRoot = createTemplateRoot("admin-page-template");
+  const pageContent =
+    activeTab === "products"
+      ? renderProductAdminPage()
+      : renderOrderAdminPage();
+
+  shellRoot.querySelector("aside").outerHTML = renderAdminSidebar(activeTab);
+  shellRoot.querySelector("[data-admin-content]").innerHTML = pageContent;
+
+  return shellRoot.innerHTML;
 }

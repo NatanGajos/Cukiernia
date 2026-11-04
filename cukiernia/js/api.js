@@ -1,79 +1,109 @@
-const apiSessionKey = 'okruszyna-session';
+const API_SESSION_STORAGE_KEY = "okruszyna-session";
 let databaseReady = false;
 let databaseError = false;
 
 function getApiSessionId() {
-  let id = localStorage.getItem(apiSessionKey);
+  let sessionId = localStorage.getItem(API_SESSION_STORAGE_KEY);
 
-  if (!id || !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id)) {
-    id = crypto.randomUUID();
-    localStorage.setItem(apiSessionKey, id);
+  if (
+    !sessionId ||
+    !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(sessionId)
+  ) {
+    sessionId = crypto.randomUUID();
+    localStorage.setItem(API_SESSION_STORAGE_KEY, sessionId);
   }
 
-  return id;
+  return sessionId;
 }
 
-async function apiRequest(path, options = {}) {
+async function apiRequest(apiPath, requestOptions = {}) {
   let response;
 
   try {
-    response = await fetch(new URL(`api/${path}`, document.baseURI), {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Session-Id': getApiSessionId(),
-        ...options.headers,
+    response = await fetch(
+      new URL(`api/index.php/${apiPath}`, document.baseURI),
+      {
+        ...requestOptions,
+        headers: {
+          "Content-Type": "application/json",
+          "X-Session-Id": getApiSessionId(),
+          ...(localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
+            ? { "X-Auth-Token": localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) }
+            : {}),
+          ...requestOptions.headers,
+        },
       },
-    });
+    );
   } catch (error) {
-    throw new Error('Nie można połączyć się z serwerem XAMPP. Sprawdź, czy działa Apache.', {
+    throw new Error(
+      "Nie można połączyć się z serwerem XAMPP. Sprawdź, czy działa Apache.",
+      {
+        cause: error,
+      },
+    );
+  }
+
+  let responseData;
+
+  try {
+    responseData = await response.json();
+  } catch (error) {
+    throw new Error("Serwer nie zwrócił prawidłowej odpowiedzi API.", {
       cause: error,
     });
   }
 
-  let result;
-
-  try {
-    result = await response.json();
-  } catch (error) {
-    throw new Error('Serwer nie zwrócił prawidłowej odpowiedzi API.', { cause: error });
-  }
-
   if (!response.ok) {
-    throw new Error(result.error || `Żądanie do bazy nie powiodło się (${response.status}).`);
+    throw new Error(
+      responseData.error ||
+        `Żądanie do bazy nie powiodło się (${response.status}).`,
+    );
   }
 
-  return result;
+  return responseData;
 }
 
-function formatOrderDate(date) {
-  return new Intl.DateTimeFormat('pl-PL', { day: 'numeric', month: 'short' })
-    .format(new Date(`${date}T12:00:00`))
-    .replace(/\.$/, '');
+function formatOrderDate(dateString) {
+  return new Intl.DateTimeFormat("pl-PL", { day: "numeric", month: "short" })
+    .format(new Date(`${dateString}T12:00:00`))
+    .replace(/\.$/, "");
 }
 
 async function initializeDatabase() {
-  const state = await apiRequest('bootstrap');
+  const bootstrapData = await apiRequest("bootstrap");
 
-  if (!Array.isArray(state.products) || !Array.isArray(state.orders)) {
-    throw new Error('Baza danych zwróciła nieprawidłowe dane strony.');
+  if (
+    !Array.isArray(bootstrapData.products) ||
+    !Array.isArray(bootstrapData.orders)
+  ) {
+    throw new Error("Baza danych zwróciła nieprawidłowe dane strony.");
   }
 
-  P.splice(0, P.length, ...state.products);
-  S.orders = state.orders.map((order) => ({
+  products.splice(0, products.length, ...bootstrapData.products);
+  appState.orders = bootstrapData.orders.map((order) => ({
     ...order,
     d: formatOrderDate(order.pickupDate),
   }));
-  S.sel = S.orders.some((order) => order.id === S.sel) ? S.sel : (S.orders[0]?.id ?? null);
-  S.edit = P.some((product) => product.id === S.edit) ? S.edit : (P[0]?.id ?? null);
+  appState.account = bootstrapData.account;
+  appState.sel = appState.orders.some((order) => order.id === appState.sel)
+    ? appState.sel
+    : (appState.orders[0]?.id ?? null);
+  appState.edit = products.some((product) => product.id === appState.edit)
+    ? appState.edit
+    : (products[0]?.id ?? null);
 
-  if (state.saved) {
-    S.cart = state.saved.cart;
-    S.fav = state.saved.fav;
+  const hasSavedCustomerData = Boolean(
+    localStorage.getItem(CUSTOMER_DATA_STORAGE_KEY),
+  );
+  const isAuthenticated = Boolean(localStorage.getItem(AUTH_TOKEN_STORAGE_KEY));
+
+  if (bootstrapData.saved && (hasSavedCustomerData || isAuthenticated)) {
+    appState.cart = bootstrapData.saved.cart;
+    appState.fav = bootstrapData.saved.fav;
   } else {
-    await apiRequest('saved', {
-      method: 'PUT',
-      body: JSON.stringify({ cart: S.cart, fav: S.fav }),
+    await apiRequest("saved", {
+      method: "PUT",
+      body: JSON.stringify({ cart: appState.cart, fav: appState.fav }),
     });
   }
 
@@ -81,76 +111,116 @@ async function initializeDatabase() {
   databaseError = false;
 }
 
-async function updateOrder(id, status) {
-  try {
-    const result = await apiRequest(`orders/${encodeURIComponent(id)}/status`, {
-      method: 'PUT',
-      body: JSON.stringify({ status }),
-    });
-    const index = S.orders.findIndex((order) => order.id === id);
+async function authenticateAccount(authenticationAction, accountData) {
+  const authenticationResult = await apiRequest(
+    `auth/${authenticationAction}`,
+    {
+      method: "POST",
+      body: JSON.stringify(accountData),
+    },
+  );
 
-    if (index !== -1) {
-      S.orders[index] = {
-        ...result.order,
-        d: formatOrderDate(result.order.pickupDate),
+  localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, authenticationResult.token);
+  appState.account = authenticationResult.account;
+  await initializeDatabase();
+  location.href = "konto.html";
+}
+
+async function logoutAccount() {
+  try {
+    await apiRequest("auth/logout", {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+  } finally {
+    localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+    appState.account = null;
+    renderApplication();
+  }
+}
+
+async function updateOrder(orderId, newStatus) {
+  try {
+    const updateResult = await apiRequest(
+      `orders/${encodeURIComponent(orderId)}/status`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ status: newStatus }),
+      },
+    );
+    const orderIndex = appState.orders.findIndex(
+      (order) => order.id === orderId,
+    );
+
+    if (orderIndex !== -1) {
+      appState.orders[orderIndex] = {
+        ...updateResult.order,
+        d: formatOrderDate(updateResult.order.pickupDate),
       };
     }
 
-    toast('Zapisano status zamówienia.');
-    render();
+    showToast("Zapisano status zamówienia.");
+    renderApplication();
   } catch (error) {
-    console.error('Nie udało się zapisać statusu zamówienia.', error);
-    toast(error.message);
+    console.error("Nie udało się zapisać statusu zamówienia.", error);
+    showToast(error.message);
   }
 }
 
-async function cancelOrder(id, reason) {
+async function cancelOrder(orderId, cancellationReason) {
   try {
-    const result = await apiRequest(`orders/${encodeURIComponent(id)}/cancel`, {
-      method: 'POST',
-      body: JSON.stringify({ reason }),
-    });
-    const index = S.orders.findIndex((order) => order.id === id);
+    const cancellationResult = await apiRequest(
+      `orders/${encodeURIComponent(orderId)}/cancel`,
+      {
+        method: "POST",
+        body: JSON.stringify({ reason: cancellationReason }),
+      },
+    );
+    const orderIndex = appState.orders.findIndex(
+      (order) => order.id === orderId,
+    );
 
-    if (index !== -1) {
-      S.orders[index] = {
-        ...result.order,
-        d: formatOrderDate(result.order.pickupDate),
+    if (orderIndex !== -1) {
+      appState.orders[orderIndex] = {
+        ...cancellationResult.order,
+        d: formatOrderDate(cancellationResult.order.pickupDate),
       };
     }
 
-    S.sel = null;
-    toast('Zamówienie anulowane.');
-    render();
+    appState.sel = null;
+    showToast("Zamówienie anulowane.");
+    renderApplication();
   } catch (error) {
-    console.error('Nie udało się anulować zamówienia.', error);
-    toast(error.message);
+    console.error("Nie udało się anulować zamówienia.", error);
+    showToast(error.message);
   }
 }
 
-async function createProduct(product) {
-  const result = await apiRequest('products', {
-    method: 'POST',
-    body: JSON.stringify(product),
+async function createProduct(productData) {
+  const createResult = await apiRequest("products", {
+    method: "POST",
+    body: JSON.stringify(productData),
   });
 
-  P.push(result.product);
-  S.edit = result.product.id;
-  toast('Dodano produkt do bazy.');
-  render();
+  products.push(createResult.product);
+  appState.edit = createResult.product.id;
+  showToast("Dodano produkt do bazy.");
+  renderApplication();
 }
 
-async function updateProduct(product) {
-  const result = await apiRequest(`products/${product.id}`, {
-    method: 'PUT',
-    body: JSON.stringify(product),
+async function updateProduct(productData) {
+  const updateResult = await apiRequest(`products/${productData.id}`, {
+    method: "PUT",
+    body: JSON.stringify(productData),
   });
-  const index = P.findIndex((item) => item.id === result.product.id);
+  const productIndex = products.findIndex(
+    (product) => product.id === updateResult.product.id,
+  );
 
-  if (index !== -1) {
-    P[index] = result.product;
+  if (productIndex !== -1) {
+    products[productIndex] = updateResult.product;
   }
 
-  toast('Zapisano produkt w bazie.');
-  render();
+  showToast("Zapisano produkt w bazie.");
+  renderApplication();
 }

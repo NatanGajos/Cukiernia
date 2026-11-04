@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Panel pracowni | Okruszyna</title>
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body data-page="admin">
+    <div id="app"></div>
+    <div id="toast"></div>
+    <template id="admin-page-template">
+      <div class="adm">
+        <aside>
+          <a class="logo" href="index.html"
+            >okruszyna<small>PANEL PRACOWNI</small></a
+          ><button data-admin-orders>Zamówienia</button
+          ><button data-admin-products>Asortyment</button
+          ><button data-a="cal">Kalendarz odbiorów</button
+          ><button data-a="cal">Ustawienia</button>
+          <p class="admin-user">
+            <b>Marta Nowak</b><br />Manager cukierni<br /><a href="index.html"
+              >↗ Zobacz sklep</a
+            >
+          </p>
+        </aside>
+        <main data-admin-content></main>
+      </div>
+    </template>
+    <template id="admin-product-list-item-template">
+      <button class="tr" data-a="edit">
+        <span data-product-image></span
+        ><span
+          ><b data-product-name></b><small data-product-size></small
+          ><small class="accent-text">● Na zamówienie</small></span
+        ><b data-product-price></b>
+      </button>
+    </template>
+    <template id="admin-product-editor-template">
+      <form class="card" id="product-form">
+        <div class="row">
+          <h2>Edytuj produkt</h2>
+          <span class="pill product-published">Opublikowany</span>
+        </div>
+        <label class="l">Nazwa produktu *</label
+        ><input class="in w" name="name" required />
+        <div class="f2">
+          <div>
+            <label class="l">Kategoria *</label
+            ><select class="in w" name="category"></select>
+          </div>
+          <div>
+            <label class="l">Cena brutto (zł) *</label
+            ><input
+              class="in w"
+              name="price"
+              type="number"
+              min="1"
+              step="0.01"
+              required
+            />
+          </div>
+        </div>
+        <div class="f2">
+          <div>
+            <label class="l">Rozmiar i porcje</label
+            ><input class="in w" name="size" />
+          </div>
+          <div>
+            <label class="l">Kolor dekoracji</label
+            ><input class="in w" name="decorationColor" />
+          </div>
+        </div>
+        <label class="l">Opis produktu</label
+        ><textarea class="in w" name="description" rows="3"></textarea
+        ><label class="l">Skład *</label
+        ><textarea class="in w" name="ingredients" rows="3" required></textarea
+        ><label class="l">Alergeny *</label
+        ><input class="in w" name="allergens" />
+        <div class="admin-form-actions">
+          <button class="btn">Zapisz zmiany</button
+          ><button type="button" class="btn o" data-a="cancel">Anuluj</button>
+        </div>
+      </form>
+    </template>
+    <template id="admin-products-page-template">
+      <div>
+        <div class="row admin-heading">
+          <div>
+            <div class="eb">Pracownia / Asortyment</div>
+            <h1>Twoja słodka kolekcja.</h1>
+          </div>
+          <button class="btn" data-a="newp">+ Dodaj nowy produkt</button>
+        </div>
+        <div class="kp">
+          <div class="card"><b data-product-count></b>Produkty w sklepie</div>
+          <div class="card">
+            <b data-product-count></b>Dostępne na zamówienie
+          </div>
+          <div class="card"><b>0</b>Wersje robocze</div>
+        </div>
+        <div class="two admin-columns">
+          <div class="tbl" data-product-list></div>
+          <div data-product-editor></div>
+        </div>
+      </div>
+    </template>
+    <template id="admin-order-list-item-template">
+      <button class="tr" data-a="sel">
+        <span class="accent-text"><b data-order-pickup></b></span
+        ><span><b data-order-number></b><small data-order-name></small></span
+        ><span
+          ><span class="pill" data-order-status></span><br /><span
+            data-order-total
+          ></span
+        ></span>
+      </button>
+    </template>
+    <template id="admin-selected-order-template">
+      <div>
+        <h2 data-order-number></h2>
+        <small class="muted" data-order-name></small>
+        <p>
+          <b>Odbiór: <span data-order-pickup></span></b>
+        </p>
+        <p data-order-items></p>
+        <p>
+          <b data-order-total></b> <span class="pill" data-order-status></span>
+        </p>
+        <label class="l">Status realizacji</label>
+        <div class="admin-status">
+          <select class="in w" id="order-status"></select
+          ><button class="btn" data-a="ssv">Zapisz status</button>
+        </div>
+        <small class="muted"
+          >Każda zmiana wysyła klientowi nową wiadomość e-mail.</small
+        >
+        <div class="card cancel-order-box">
+          <b>Anuluj zamówienie · tylko manager</b
+          ><label class="l">Powód anulowania *</label
+          ><textarea class="in w" id="cancellation-reason" rows="2"></textarea>
+          <div class="err" id="error-cancellation-reason"></div>
+          <button class="btn o w" data-a="cx">
+            Potwierdź anulowanie i powiadom
+          </button>
+        </div>
+      </div>
+    </template>
+    <template id="admin-orders-page-template">
+      <div>
+        <div class="row admin-heading">
+          <div>
+            <div class="eb">Pracownia / Zamówienia</div>
+            <h1>Dobry plan. Pyszny dzień.</h1>
+          </div>
+          <small>Wtorek, 3 listopada 2026</small>
+        </div>
+        <div class="kp">
+          <div class="card"><b data-order-count></b>Najbliższe zamówienia</div>
+          <div class="card"><b data-preparing-count></b>W przygotowaniu</div>
+          <div class="card">
+            <b data-paid-count></b>Czekają na przygotowanie
+          </div>
+        </div>
+        <div class="two admin-columns">
+          <div>
+            <input
+              class="in w"
+              id="order-search"
+              placeholder="Numer zamówienia lub nazwisko"
+              aria-label="Szukaj zamówienia"
+            />
+            <div class="tbl" id="order-list"></div>
+          </div>
+          <div class="card" id="order-details"></div>
+        </div>
+      </div>
+    </template>
+    <script src="js/data.js?v=20261104"></script>
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/shop.js"></script>
+    <script src="js/account.js"></script>
+    <script src="js/admin.js?v=20261104-2"></script>
+    <script src="js/checkout.js"></script>
+    <script src="js/app.js"></script>
+  </body>
+</html>
